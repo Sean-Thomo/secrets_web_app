@@ -9,6 +9,8 @@ const passportLocalMongoose = require('passport-local-mongoose');
 const { serializeUser } = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const findOrCreate = require('mongoose-findorcreate');
+const FacebookStrategy = require('passport-facebook').Strategy;
+const dotenv = require('dotenv');
 
 const app = express();
 
@@ -17,6 +19,8 @@ app.set('view engine', 'ejs');
 app.use(bodyParser.urlencoded({
   extended: true
 }));
+
+dotenv.config();
 
 app.use(session({
   secret: process.env.SECRET,
@@ -53,16 +57,32 @@ passport.deserializeUser((id, done) => {
   })
 });
 
-passport.use(new GoogleStrategy({
-  clientID: process.env.CLIENT_ID,
-  clientSecret: process.env.CLIENT_SECRET,
-  callbackURL: 'http://localhost:3000/auth/google/secrets',
-  userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo'
-}, (accessToken, refreshToken, profile, cb) => {
-  User.findOrCreate({ googleID: profile.id }, (err, user) => {
-    return cb(err, user);
+passport.use(
+  new GoogleStrategy({
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    callbackURL: process.env.GOOGLE_CALLBACK_URL,
+    userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo'
+  }, 
+  (accessToken, refreshToken, profile, cb) => {
+    User.findOrCreate({ googleID: profile.id }, (err, user) => {
+      return cb(err, user);
   });
-}
+  }
+));
+
+passport.use(
+  new FacebookStrategy({
+    clientID: process.env.FACEBOOK_CLIENT_ID,
+    clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
+    callbackURL: process.env.FACEBOOK_CALLBACK_URL,
+    profileFields: ['email', 'name']
+  },
+  (accessToken, refreshToken, profile, cb) => {
+    User.findOrCreate({ facebookId: profile.id}, (err, user) => {
+      return cb(err, user);
+    })
+  }
 ));
 
 app.get('/', (req, res) => {
@@ -73,13 +93,22 @@ app.route('/auth/google')
   .get(passport.authenticate('google', {
     scope: ['profile']
   }));
+  
+app.get('/auth/google', passport.authenticate('google', {scope: ['profile'] }))
 
-app.get('/auth/google/secrets', 
-  passport.authenticate('google', {
-    successRedirect: '/secrets',
-    failureRedirect: '/login'
+app.get('/auth/google/secrets', passport.authenticate('google', {
+  successRedirect: '/secrets',
+  failureRedirect: '/login'
   })
-  );
+);
+
+app.get('/auth/facebook', passport.authenticate('facebook'));
+
+app.get('/auth/facebook/secrets', passport.authenticate('facebook', {
+  successRedirect: '/secrets',
+  failureRedirect: '/login'
+  })
+);
 
 app.get('/login', (req, res) => {
   res.render('login')
