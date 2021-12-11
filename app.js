@@ -62,7 +62,7 @@ passport.use(
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL,
-    userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo'
+    // userProfileURL: 'https://www.googleapis.com/oauth2/v3/userinfo'
   }, 
   (accessToken, refreshToken, profile, cb) => {
     User.findOrCreate({ googleID: profile.id }, (err, user) => {
